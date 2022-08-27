@@ -2,9 +2,14 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"my-app/db"
+	"strings"
+
+	"ramdeuter.org/solscraper/db"
+	"ramdeuter.org/solscraper/query"
+	"ramdeuter.org/solscraper/scraper"
 )
 
 type App struct {
@@ -22,6 +27,11 @@ func NewApp(d db.DB, cors bool) App {
 		techHandler = disableCors(techHandler)
 	}
 	app.handlers["/api/technologies"] = techHandler
+	app.handlers["/create"] = app.createAPI
+	app.handlers["/save"] = app.saveAPI
+	//app.handlers["/apis"]
+	app.handlers["/apis/"] = app.getQueryData
+	app.handlers["/apis/meta"] = app.getQueryMeta
 	app.handlers["/"] = http.FileServer(http.Dir("/webapp")).ServeHTTP
 	return app
 }
@@ -31,7 +41,7 @@ func (a *App) Serve() error {
 		http.Handle(path, handler)
 	}
 	log.Println("Web server is available on port 8080")
-	return http.ListenAndServe(":8080", nil)
+	return http.ListenAndServe(":12345", nil)
 }
 
 func (a *App) GetTechnologies(w http.ResponseWriter, r *http.Request) {
@@ -45,6 +55,52 @@ func (a *App) GetTechnologies(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		sendErr(w, http.StatusInternalServerError, err.Error())
 	}
+}
+
+func (a *App) createAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	q := query.Query{}
+	err := json.NewDecoder(r.Body).Decode(&q)
+	if err != nil {
+		sendErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	data := scraper.ScrapeData(q)
+	jsonData, _ := json.Marshal(data)
+	w.Write(jsonData)
+}
+
+func (a *App) saveAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	q := query.Query{}
+	err := json.NewDecoder(r.Body).Decode(&q)
+	if err != nil {
+		sendErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	a.d.SaveQuery(q)
+}
+
+func (a *App) getQueryMeta(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	metadata, err := a.d.GetMetadata()
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	jsonData, _ := json.Marshal(metadata)
+	w.Write(jsonData)
+}
+
+func (a *App) getQueryData(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	paths := strings.Split(r.URL.String(), "/")
+	name := paths[len(paths)-1]
+	data, err := a.d.GetDataForQuery(name)
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	jsonData, _ := json.Marshal(data)
+	w.Write(jsonData)
 }
 
 func sendErr(w http.ResponseWriter, code int, message string) {

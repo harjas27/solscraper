@@ -21,7 +21,7 @@
 * popular tokens
 
 ## Name Service
-* list tokens
+* list tokens using create transaction
 
 ## SwitchBoard - Oracle
 * aggrgator/oracle for all aggregator save result
