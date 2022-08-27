@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
-	"my-app/db"
-	"my-app/web"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"ramdeuter.org/solscraper/db"
+	"ramdeuter.org/solscraper/web"
 )
 
 func main() {
